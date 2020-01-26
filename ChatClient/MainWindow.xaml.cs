@@ -14,7 +14,6 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Net.Sockets;
 using System.Net;
-using ChatClient.Network;
 
 namespace ChatClient
 {
@@ -23,21 +22,23 @@ namespace ChatClient
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Socket Socket;
-        private TextTransfer TextTransfer;
+        Client Client;
 
         public MainWindow()
         {
-            InitializeComponent();
+            InitializeComponent();            
 
-            int port = 8573;
+            ConnectButton.Click += ConnectServer;            
+        }
 
-            IPHostEntry hostEntry = Dns.GetHostEntry("8.8.8.8");
-
-            foreach(IPAddress address in hostEntry.AddressList) {
-                IPEndPoint ipe = new IPEndPoint(address, port);
-
-                Socket s = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        public void ConnectServer(object sender, EventArgs eventArgs)
+        {
+            try {
+                Client = new Client(ServerTextBox.Text, int.Parse(PortTextBox.Text));
+                Hide();
+                new ChatWindow(Client).Show();
+            } catch(Exception ex) {
+                MessageBox.Show(ex.Message);
             }
         }
     }
