@@ -10,14 +10,16 @@ namespace ChatClient
 {  
     public class Client
     {
-        public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
-
         private NetworkStream NetworkStream;
         private StreamWriter StreamWriter;
         private StreamReader StreamReader;
+
+        public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
         public event MessageReceivedEventHandler MessageReceived;
 
-        public Client(string server, int port)
+        public Client() { }
+
+        public void Connect(string server, int port)
         {
             Socket socket = ConnectSocket(server, port);
 
@@ -25,17 +27,11 @@ namespace ChatClient
                 throw new NullReferenceException("Connection Failed!");
             }
 
-
             NetworkStream = new NetworkStream(socket);
             StreamWriter = new StreamWriter(NetworkStream);
             StreamReader = new StreamReader(NetworkStream);
 
-            new Thread(ReceiveMessage).Start();
-        }
-
-        public static Client Connect(string server, int port)
-        {
-            return new Client(server, port);
+            new Thread(ReceiveMessageLoop).Start();
         }
 
         private Socket ConnectSocket(string server, int port)
@@ -62,7 +58,7 @@ namespace ChatClient
             handler?.Invoke(this, e);
         }
 
-        private void ReceiveMessage() 
+        private void ReceiveMessageLoop() 
         {
             string text;
             while((text = StreamReader.ReadLine()) != null) {
