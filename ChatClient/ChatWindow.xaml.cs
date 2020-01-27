@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ChatClient.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Windows;
@@ -18,27 +19,29 @@ namespace ChatClient
     public partial class ChatWindow : Window
     {
         public Client Client = new Client();
+        public ChatBase ChatBase = new ChatBase();
 
         public ChatWindow()
         {
             InitializeComponent();
 
             Loaded += (s, ev) => {
+                //foreach(Message message in ChatBase.Messages) {
+                //    AppendMessage(message.Text, message.Date);
+                //}
+
                 Client.MessageReceived += (s, ev) => {                    
                     Dispatcher.Invoke(() =>
                     {
                         if(ev.Message.StartsWith("<ADD USERNAME>")) {
-                            string[] userList = ev.Message
-                                                    .Replace("<ADD USERNAME>[","")
-                                                    .Replace("]","")
-                                                    .Split(",");
-                            foreach(string user in userList) {
-                                UsersList.Items.Add(user.Trim());
-                            }
+                            UpdateUsersList(ev.Message);
                             return;
                         }
-                        ChatTextBox.AppendText(String.Format("[{0}] {1} \n", ev.On.ToShortTimeString(), ev.Message));
-                        ChatTextBox.ScrollToEnd();                        
+                        AppendMessage(ev.Message, ev.On);
+                        //ChatBase.Messages.Add(new Message() {
+                        //    Text = ev.Message,
+                        //    Date = ev.On
+                        //});
                     });
                 };
             };
@@ -54,6 +57,24 @@ namespace ChatClient
                 Client.SendMessage(MessageTextBox.Text);
                 MessageTextBox.Clear();
             };
+        }
+
+        private void AppendMessage(string message, DateTime on)
+        {
+            ChatTextBox.AppendText(String.Format("[{0}] {1} \n", on.ToShortTimeString(), message));
+            ChatTextBox.ScrollToEnd();
+        }
+
+        private void UpdateUsersList(string users)
+        {
+            string[] userList = users
+                        .Replace("<ADD USERNAME>[", "")
+                        .Replace("]", "")
+                        .Split(",");
+
+            foreach(string user in userList) {
+                UsersList.Items.Add(user.Trim());
+            }
         }
     }
 }

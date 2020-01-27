@@ -34,6 +34,7 @@ namespace ChatClient
                     chatWindow.Hide();
                     Show();
                     chatWindow.Client.Connect(ServerTextBox.Text, int.Parse(PortTextBox.Text));
+                    chatWindow.Client.SetUsername(UsernameTextBox.Text);
                     chatWindow.Show();
                     Hide();                    
                 } catch(Exception ex) {

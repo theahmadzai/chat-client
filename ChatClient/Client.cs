@@ -74,5 +74,10 @@ namespace ChatClient
             StreamWriter.WriteLine(message);
             StreamWriter.Flush();
         }
+
+        public void SetUsername(string username)
+        {
+            //SendMessage("<SET USERNAME>" + username);
+        }
     }
 }
