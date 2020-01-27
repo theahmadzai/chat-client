@@ -23,12 +23,12 @@ namespace ChatClient
 
         public ChatWindow()
         {
-            InitializeComponent();
+            InitializeComponent();            
 
             Loaded += (s, ev) => {
-                //foreach(Message message in ChatBase.Messages) {
-                //    AppendMessage(message.Text, message.Date);
-                //}
+                foreach(Message message in ChatBase.Messages) {
+                    AppendMessage(message.Text, message.Date);
+                }
 
                 Client.MessageReceived += (s, ev) => {                    
                     Dispatcher.Invoke(() =>
@@ -38,10 +38,11 @@ namespace ChatClient
                             return;
                         }
                         AppendMessage(ev.Message, ev.On);
-                        //ChatBase.Messages.Add(new Message() {
-                        //    Text = ev.Message,
-                        //    Date = ev.On
-                        //});
+                        ChatBase.Messages.Add(new Message() {
+                            Text = ev.Message,
+                            Date = ev.On
+                        });
+                        ChatBase.SaveChanges();
                     });
                 };
             };
