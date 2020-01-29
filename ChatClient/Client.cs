@@ -13,11 +13,30 @@ namespace ChatClient
         private NetworkStream NetworkStream;
         private StreamWriter StreamWriter;
         private StreamReader StreamReader;
+        private List<Peer> Peers = new List<Peer>();
 
         public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
         public event MessageReceivedEventHandler MessageReceived;
 
-        public Client() { }
+        public Client() 
+        {
+            
+        }
+
+        public void Listen()
+        {
+            IPHostEntry iPHostInfo = Dns.GetHostEntry(Dns.GetHostName());
+            IPAddress ipAddress = iPHostInfo.AddressList[0];
+            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 55555);    
+            Socket socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+            try {
+                socket.Bind(localEndPoint);
+                socket.Listen(100);
+            } catch(Exception ex) {
+                throw ex;
+            }
+        }
 
         public void Connect(string server, int port)
         {
