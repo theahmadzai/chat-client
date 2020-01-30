@@ -5,52 +5,88 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using static ChatClient.Peer;
 
 namespace ChatClient
 {  
     public class Client
     {
-        private NetworkStream NetworkStream;
-        private StreamWriter StreamWriter;
-        private StreamReader StreamReader;
+        public int PORT = 55555;
+
         private List<Peer> Peers = new List<Peer>();
 
-        public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
+        public delegate void PeerAddedEventHandler(object s, PeerAddedEventArgs ev);
+        public event PeerAddedEventHandler PeerAdded;
+
         public event MessageReceivedEventHandler MessageReceived;
 
-        public Client() 
+        public Client(int port) 
         {
-            
+            PORT = port;
+            new Thread(ListenPeers).Start();
         }
 
-        public void Listen()
+        public void ListenPeers()
         {
-            IPHostEntry iPHostInfo = Dns.GetHostEntry(Dns.GetHostName());
-            IPAddress ipAddress = iPHostInfo.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 55555);    
-            Socket socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, PORT);    
+            Socket listenerSocket = new Socket(IPAddress.Any.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
             try {
-                socket.Bind(localEndPoint);
-                socket.Listen(100);
+                listenerSocket.Bind(localEndPoint);
+                listenerSocket.Listen(10);
+
+                while(true) {
+                    Socket peerSocket = listenerSocket.Accept();
+                    Peer peer = new Peer(peerSocket);
+                    IPEndPoint peerIPEndPoint = (peerSocket.RemoteEndPoint as IPEndPoint);
+                    PeerAdded?.Invoke(this, new PeerAddedEventArgs() {
+                        IPAddress = peerIPEndPoint.Address.ToString(),
+                        Port = peerIPEndPoint.Port.ToString(),
+                    });
+
+                    foreach(Peer p in Peers) {
+                        peer.guid ^= p.guid.GetHashCode();
+                    }
+
+                    Peers.Add(peer);
+                    peer.SendGuid();
+                    peer.MessageReceived += MessageReceived;
+                }
+
             } catch(Exception ex) {
                 throw ex;
             }
         }
 
-        public void Connect(string server, int port)
+        public void AddPeer(string peerIp)
         {
-            Socket socket = ConnectSocket(server, port);
+            string[] two = peerIp.Trim().Split(':');
+            peerIp = two[0];
+            int PORT = int.Parse(two[1]);
 
-            if(socket == null) {
+            IPAddress ip = IPAddress.Parse(peerIp);
+            
+            foreach(Peer p in Peers) {
+                IPEndPoint ep = p.Socket.RemoteEndPoint as IPEndPoint;
+                if(ep.Address.Equals(ip) && ep.Port == PORT) {
+                    throw new InvalidDataException("This peer alrady exists.");
+                }
+            }
+            
+            Socket peerSocket = ConnectSocket(peerIp, PORT);
+
+            if(peerSocket == null) {
                 throw new NullReferenceException("Connection Failed!");
             }
 
-            NetworkStream = new NetworkStream(socket);
-            StreamWriter = new StreamWriter(NetworkStream);
-            StreamReader = new StreamReader(NetworkStream);
-
-            new Thread(ReceiveMessageLoop).Start();
+            Peer peer = new Peer(peerSocket);
+            IPEndPoint peerIPEndPoint = (peerSocket.RemoteEndPoint as IPEndPoint);
+            PeerAdded?.Invoke(this, new PeerAddedEventArgs() {
+                IPAddress = peerIPEndPoint.Address.ToString(),
+                Port = peerIPEndPoint.Port.ToString(),
+            });
+            Peers.Add(peer);
+            peer.MessageReceived += MessageReceived;
         }
 
         private Socket ConnectSocket(string server, int port)
@@ -69,34 +105,13 @@ namespace ChatClient
             }
 
             return null;
-        }
-
-        protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
-        {
-            MessageReceivedEventHandler handler = MessageReceived;
-            handler?.Invoke(this, e);
-        }
-
-        private void ReceiveMessageLoop() 
-        {
-            string text;
-            while((text = StreamReader.ReadLine()) != null) {
-                OnMessageReceived(new MessageReceivedEventArgs() {
-                    Message = text,
-                    On = DateTime.Now
-                });
-            }            
-        }
+        }     
 
         public void SendMessage(string message)
         {
-            StreamWriter.WriteLine(message);
-            StreamWriter.Flush();
-        }
-
-        public void SetUsername(string username)
-        {
-            //SendMessage("<SET USERNAME>" + username);
+            foreach(Peer peer in Peers) {
+                peer.SendMessage(message);
+            }
         }
     }
 }

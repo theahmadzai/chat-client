@@ -22,21 +22,15 @@ namespace ChatClient
     /// </summary>
     public partial class MainWindow : Window
     {
-        ChatWindow chatWindow = new ChatWindow();
-
         public MainWindow()
         {
             InitializeComponent();
 
             ConnectButton.Click += (s, ev) => {
                 try {
+                    Hide();
+                    ChatWindow chatWindow = new ChatWindow(int.Parse(PortTextBox.Text));
                     chatWindow.Show();
-                    chatWindow.Hide();
-                    Show();
-                    chatWindow.Client.Connect(ServerTextBox.Text, int.Parse(PortTextBox.Text));
-                    chatWindow.Client.SetUsername(UsernameTextBox.Text);
-                    chatWindow.Show();
-                    Hide();                    
                 } catch(Exception ex) {
                     MessageBox.Show(ex.Message);
                 }

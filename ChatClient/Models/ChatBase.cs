@@ -23,7 +23,7 @@ namespace ChatClient.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionbuilder)
         {
-            optionbuilder.UseSqlite(@"Data Source=" + System.AppDomain.CurrentDomain.BaseDirectory + "Chat.db");
+            optionbuilder.UseSqlite(@"Data Source=Chat.db");
         }
 
     }
