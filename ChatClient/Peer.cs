@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -55,6 +56,21 @@ namespace ChatClient
         public void SendGuid()
         {
             SendMessage("GUID:" + guid);
+        }
+
+        public IPEndPoint GetEndPoint()
+        {
+            return Socket.RemoteEndPoint as IPEndPoint;
+        }
+
+        public IPAddress GetAddress()
+        {
+            return GetEndPoint().Address;
+        }
+
+        public int GetPort()
+        {
+            return GetEndPoint().Port;
         }
     }
 }

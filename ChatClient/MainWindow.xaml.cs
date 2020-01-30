@@ -29,7 +29,7 @@ namespace ChatClient
             ConnectButton.Click += (s, ev) => {
                 try {
                     Hide();
-                    ChatWindow chatWindow = new ChatWindow(int.Parse(PortTextBox.Text));
+                    ChatWindow chatWindow = new ChatWindow(UsernameTextBox.Text);
                     chatWindow.Show();
                 } catch(Exception ex) {
                     MessageBox.Show(ex.Message);

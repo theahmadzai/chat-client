@@ -21,13 +21,17 @@ namespace ChatClient
     public partial class ChatWindow : Window
     {
         public Client Client;
-        public ChatBase ChatBase = new ChatBase();
+        public ChatBase ChatBase;
+        private string username;
 
-        public ChatWindow(int port)
+        public ChatWindow(string username)
         {
             InitializeComponent();
 
-            Client = new Client(port);
+            this.username = username;
+
+            Client = new Client();
+            ChatBase = new ChatBase();
 
             Loaded += (s, ev) => {
                 foreach(Message message in ChatBase.Messages) {
