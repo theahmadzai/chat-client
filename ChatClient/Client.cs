@@ -29,7 +29,7 @@ namespace ChatClient
         public void ListenPeers()
         {
             IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, PORT);    
-            Socket listenerSocket = new Socket(IPAddress.Any.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            Socket listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             try {
                 listenerSocket.Bind(localEndPoint);
@@ -39,17 +39,18 @@ namespace ChatClient
                     Socket peerSocket = listenerSocket.Accept();
                     Peer peer = new Peer(peerSocket);
                     IPEndPoint peerIPEndPoint = (peerSocket.RemoteEndPoint as IPEndPoint);
+
                     PeerAdded?.Invoke(this, new PeerAddedEventArgs() {
                         IPAddress = peerIPEndPoint.Address.ToString(),
                         Port = peerIPEndPoint.Port.ToString(),
                     });
 
-                    foreach(Peer p in Peers) {
-                        peer.guid ^= p.guid.GetHashCode();
-                    }
+                    //foreach(Peer p in Peers) {
+                    //    peer.guid ^= p.guid.GetHashCode();
+                    //}
 
                     Peers.Add(peer);
-                    peer.SendGuid();
+                    //peer.SendGuid();
                     peer.MessageReceived += MessageReceived;
                 }
 
@@ -64,11 +65,17 @@ namespace ChatClient
             peerIp = two[0];
             int PORT = int.Parse(two[1]);
 
-            IPAddress ip = IPAddress.Parse(peerIp);
-            
+            IPAddress[] addresses = Array.FindAll(Dns.GetHostEntry(peerIp).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
+
+            IPAddress[] selfa = Array.FindAll(Dns.GetHostEntry(IPAddress.Loopback).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
+
+            if(addresses[0].Equals(selfa[0]) && PORT == this.PORT) {
+                throw new InvalidDataException("Cannot connect to self.");
+            }
+
             foreach(Peer p in Peers) {
                 IPEndPoint ep = p.Socket.RemoteEndPoint as IPEndPoint;
-                if(ep.Address.Equals(ip) && ep.Port == PORT) {
+                if(ep.Address.Equals(addresses[0]) && ep.Port == PORT) {
                     throw new InvalidDataException("This peer alrady exists.");
                 }
             }
@@ -91,12 +98,12 @@ namespace ChatClient
 
         private Socket ConnectSocket(string server, int port)
         {
-            IPHostEntry hostEntry = Dns.GetHostEntry(server);
+            IPAddress[] addresses = Array.FindAll(Dns.GetHostEntry(server).AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
 
-            foreach(IPAddress address in hostEntry.AddressList) {
+            foreach(IPAddress address in addresses) {
                 IPEndPoint ipe = new IPEndPoint(address, port);
 
-                Socket socket = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 socket.Connect(ipe);
 
                 if(socket.Connected) {
