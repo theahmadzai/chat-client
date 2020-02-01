@@ -36,10 +36,15 @@ namespace ChatClient
             handler?.Invoke(this, e);
         }
 
+        private bool Connected()
+        {
+            return !(Socket.Poll(1, SelectMode.SelectRead) && Socket.Available == 0);
+        }
+
         private void ReceiveMessageLoop()
         {
-            string text;
-            while((text = StreamReader.ReadLine()) != null) {                
+            while(Connected()) {
+                string text = StreamReader.ReadLine();
                 OnMessageReceived(new MessageReceivedEventArgs() {
                     Message = text,
                     On = DateTime.Now
@@ -58,19 +63,34 @@ namespace ChatClient
             SendMessage("GUID:" + guid);
         }
 
-        public IPEndPoint GetEndPoint()
+        public IPEndPoint GetRemoteEndPoint()
         {
             return Socket.RemoteEndPoint as IPEndPoint;
         }
 
-        public IPAddress GetAddress()
+        public IPAddress GetRemoteAddress()
         {
-            return GetEndPoint().Address;
+            return GetRemoteEndPoint().Address;
         }
 
-        public int GetPort()
+        public int GetRemotePort()
         {
-            return GetEndPoint().Port;
+            return GetRemoteEndPoint().Port;
+        }
+
+        public IPEndPoint GetLocalEndPoint()
+        {
+            return Socket.LocalEndPoint as IPEndPoint;
+        }
+
+        public IPAddress GetLocalAddress()
+        {
+            return GetLocalEndPoint().Address;
+        }
+
+        public int GetLocalPort()
+        {
+            return GetLocalEndPoint().Port;
         }
     }
 }

@@ -13,7 +13,7 @@ namespace ChatClient
 {  
     public class Client
     {
-        private const int PORT = 7777;
+        private int PORT = 10101;
 
         private List<Peer> Peers = new List<Peer>();
 
@@ -22,21 +22,29 @@ namespace ChatClient
         public event PeerAddedEventHandler PeerAdded;
         public event MessageReceivedEventHandler MessageReceived;
 
-        public Client() 
+        public Client()
         {
             new Thread(ListenPeers).Start();
         }
 
-        public void ListenPeers()
+        private void ListenPeers()
         {
-            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, PORT);    
             Socket listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            listenerSocket.Bind(localEndPoint);
-            listenerSocket.Listen(10);
+            while(!listenerSocket.IsBound) {
+                try {
+                    listenerSocket.Bind(new IPEndPoint(IPAddress.Any, PORT));
+                    listenerSocket.Listen(10);
+                } catch(Exception) {                    
+                    PORT += 1;
+                    if(PORT > 10110) {
+                        return;
+                    }                    
+                }
+            }
 
             OpenPort();
-          
+
             while(true) {
                 Socket peerSocket = listenerSocket.Accept();
                 Peer peer = new Peer(peerSocket);
@@ -50,36 +58,43 @@ namespace ChatClient
         protected virtual void OnPeerAdded(Peer peer)
         {
             PeerAdded?.Invoke(this, new PeerAddedEventArgs() {
-                IPAddress = peer.GetAddress().ToString(),
-                Port = peer.GetPort().ToString()
+                IPAddress = peer.GetRemoteAddress().ToString(),
+                Port = peer.GetRemotePort().ToString()
             });
         }
 
         public async void OpenPort()
         {
             var discoverer = new NatDiscoverer();
-            var cts = new CancellationTokenSource(15000);            
+            var cts = new CancellationTokenSource(15000);
             var device = await discoverer.DiscoverDeviceAsync(PortMapper.Upnp, cts);
-            await device.CreatePortMapAsync(new Mapping(Protocol.Tcp, PORT, PORT, "ClientChat"));
+            await device.CreatePortMapAsync(new Mapping(Protocol.Tcp, PORT, PORT, "ClientChat"));           
         }
 
         public void AddPeer(string address)
-        {            
-            IPAddress peerAddress = GetAddress(IPAddress.Parse(address));
+        {
+            int port = PORT;
 
-            if(peerAddress.Equals(GetAddress(IPAddress.Loopback))){
+            SetAddressAndPort(ref address, ref port);                        
+
+            IPAddress peerAddress = GetAddress(address);
+
+            if((peerAddress.Equals(IPAddress.Loopback) ||
+                peerAddress.Equals(GetAddress(string.Empty))) &&
+                port == PORT) {
                 throw new InvalidDataException("Cannot connect to self.");
             }
 
-            foreach(Peer p in Peers) {               
-                if(peerAddress.Equals(p.GetAddress())) {
+            foreach(Peer p in Peers) {
+                if(peerAddress.Equals(p.GetRemoteAddress()) && 
+                    (port == p.GetRemotePort() || port == p.GetLocalPort()) ||
+                    PORT == p.GetLocalPort()) {                    
                     throw new InvalidDataException("This peer alrady exists.");
                 }
             }
 
-            IPEndPoint remoteEndPoint = new IPEndPoint(peerAddress, PORT);
             Socket peerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            peerSocket.Connect(remoteEndPoint);
+            peerSocket.Connect(new IPEndPoint(peerAddress, port));
 
             Peer peer = new Peer(peerSocket);
             Peers.Add(peer);
@@ -95,17 +110,24 @@ namespace ChatClient
             }
         }
 
-        public IPAddress GetAddress(IPAddress address)
+        private IPAddress GetAddress(string address)
         {
             IPHostEntry hostEntry = Dns.GetHostEntry(address);
 
             if(hostEntry.AddressList.Length <= 0) {
-                return address;
+                return IPAddress.Parse(address);
             }
 
-            IPAddress[] addresses = Array.FindAll(hostEntry.AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
+            return Array.Find(hostEntry.AddressList, a => a.AddressFamily == AddressFamily.InterNetwork);
+        }
 
-            return addresses[0];
+        private void SetAddressAndPort(ref string address, ref int port)
+        {
+            if(address.Contains(':')) {
+                string[] ap = address.Split(':');
+                address = ap[0];
+                port = int.Parse(ap[1]);
+            }
         }
     }
 }

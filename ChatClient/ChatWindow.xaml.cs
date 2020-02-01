@@ -30,8 +30,13 @@ namespace ChatClient
 
             this.username = username;
 
-            Client = new Client();
             ChatBase = new ChatBase();
+
+            try {
+                Client = new Client();
+            } catch(Exception ex) {
+                MessageBox.Show(ex.Message);
+            }
 
             Loaded += (s, ev) => {
                 foreach(Message message in ChatBase.Messages) {
