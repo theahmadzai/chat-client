@@ -65,7 +65,12 @@ namespace ChatClient
 
         private void AddPeer(object s, RoutedEventArgs ev)
         {
-            Client.AddPeer(AddPeerTextBox.Text.Trim());
+            try {
+                Client.AddPeer(AddPeerTextBox.Text.Trim());
+            }                
+            catch(Exception ex) {
+                MessageBox.Show(ex.Message);
+            }
         }
 
         private void RemovePeer(object s, RoutedEventArgs ev)
