@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ChatClient
 {
-    public class PeerAddedEventArgs
+    public class PeerEventArgs
     {
         public string IPAddress { get; set; }
         public string Port { get; set; }

@@ -20,6 +20,9 @@ namespace ChatClient
         public delegate void MessageReceivedEventHandler(object s, MessageReceivedEventArgs ev);
         public event MessageReceivedEventHandler MessageReceived;
 
+        public delegate void PeerEventHandler(object s, PeerEventArgs ev);
+        public event PeerEventHandler PeerRemoved;
+
         public Peer(Socket socket)
         {
             Socket = socket;
@@ -43,13 +46,22 @@ namespace ChatClient
 
         private void ReceiveMessageLoop()
         {
-            while(Connected()) {
-                string text = StreamReader.ReadLine();
-                OnMessageReceived(new MessageReceivedEventArgs() {
-                    Message = text,
-                    On = DateTime.Now
-                });
-            }
+            try {
+                while(Connected()) {
+                    OnMessageReceived(new MessageReceivedEventArgs() {
+                        Message = StreamReader.ReadLine(),
+                        On = DateTime.Now
+                    });
+                }
+            } catch(Exception) {
+                if(Socket.Connected) {
+                    PeerRemoved?.Invoke(this, new PeerEventArgs() {
+                        IPAddress = GetRemoteAddress().ToString(),
+                        Port = GetRemotePort().ToString()
+                    });
+                    Socket.Close();                    
+                }
+            }            
         }
 
         public void SendMessage(string message)

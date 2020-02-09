@@ -33,45 +33,58 @@ namespace ChatClient
             ChatBase = new ChatBase();
 
             try {
-                Client = new Client();
+                Client = new Client();            
+
+                Loaded += (s, ev) => {
+                    foreach(Message message in ChatBase.Messages) {
+                        AppendMessage(message.Text, message.Date);
+                    }
+                };
+
+                Client.PeerAdded += new PeerEventHandler(PeerAdded);
+
+                Client.PeerRemoved += new PeerEventHandler(PeerRemoved);
+
+                Client.MessageReceived += new MessageReceivedEventHandler(MessageReceived);
+
+                AddPeerButton.Click += new RoutedEventHandler(AddPeer);
+
+                RemovePeerButton.Click += new RoutedEventHandler(RemovePeer);
+
+                SendButton.Click += new RoutedEventHandler(SendMessage);
+
+                MessageTextBox.KeyDown +=  (s, ev) => {                
+                    if(ev.Key == Key.Return) {
+                        SendMessage(s, ev);
+                    }
+                };
             } catch(Exception ex) {
                 MessageBox.Show(ex.Message);
             }
-
-            Loaded += (s, ev) => {
-                foreach(Message message in ChatBase.Messages) {
-                    AppendMessage(message.Text, message.Date);
-                }
-            };
-
-            Client.PeerAdded += new PeerAddedEventHandler(PeerAdded);
-
-            Client.MessageReceived += new MessageReceivedEventHandler(MessageReceived);
-
-            AddPeerButton.Click += new RoutedEventHandler(AddPeer);
-
-            SendButton.Click += new RoutedEventHandler(SendMessage);
-
-            MessageTextBox.KeyDown +=  (s, ev) => {                
-                if(ev.Key == Key.Return) {
-                    SendMessage(s, ev);
-                }
-            };
         }
 
         private void AddPeer(object s, RoutedEventArgs ev)
         {
-            try {
-                Client.AddPeer(AddPeerTextBox.Text.Trim());
-            } catch(Exception ex) {
-                MessageBox.Show(ex.Message);
-            }
+            Client.AddPeer(AddPeerTextBox.Text.Trim());
         }
 
-        private void PeerAdded(object s, PeerAddedEventArgs ev)
+        private void RemovePeer(object s, RoutedEventArgs ev)
+        {
+            Client.RemovePeer(PeerList.SelectedItem.ToString());
+            MessageBox.Show(PeerList.SelectedItem.ToString());
+        }
+
+        private void PeerAdded(object s, PeerEventArgs ev)
         {
             Dispatcher.Invoke(() => {
                 PeerList.Items.Add(ev.ToString());
+            });
+        }
+
+        private void PeerRemoved(object s, PeerEventArgs ev)
+        {
+            Dispatcher.Invoke(() => {
+                PeerList.Items.Remove(ev.ToString());
             });
         }
 

@@ -17,9 +17,8 @@ namespace ChatClient
 
         private List<Peer> Peers = new List<Peer>();
 
-        public delegate void PeerAddedEventHandler(object s, PeerAddedEventArgs ev);
-
-        public event PeerAddedEventHandler PeerAdded;
+        public event PeerEventHandler PeerAdded;
+        public event PeerEventHandler PeerRemoved;
         public event MessageReceivedEventHandler MessageReceived;
 
         public Client()
@@ -51,13 +50,22 @@ namespace ChatClient
                 Peers.Add(peer);
 
                 peer.MessageReceived += MessageReceived;
+                peer.PeerRemoved += PeerRemoved;
                 OnPeerAdded(peer);
             }
         }
 
         protected virtual void OnPeerAdded(Peer peer)
         {
-            PeerAdded?.Invoke(this, new PeerAddedEventArgs() {
+            PeerAdded?.Invoke(this, new PeerEventArgs() {
+                IPAddress = peer.GetRemoteAddress().ToString(),
+                Port = peer.GetRemotePort().ToString()
+            });
+        }
+
+        protected virtual void OnPeerRemoved(Peer peer)
+        {
+            PeerRemoved?.Invoke(this, new PeerEventArgs() {
                 IPAddress = peer.GetRemoteAddress().ToString(),
                 Port = peer.GetRemotePort().ToString()
             });
@@ -100,7 +108,25 @@ namespace ChatClient
             Peers.Add(peer);
 
             peer.MessageReceived += MessageReceived;
+            peer.PeerRemoved += PeerRemoved;
             OnPeerAdded(peer);
+        }
+
+        public void RemovePeer(string address)
+        {
+            int port = PORT;
+
+            SetAddressAndPort(ref address, ref port);
+
+            foreach(Peer p in Peers) {
+                if(p.GetRemoteAddress().Equals(IPAddress.Parse(address)) &&
+                    p.GetRemotePort() == port) {
+                    p.Socket.Close();
+                    OnPeerRemoved(p);
+                    Peers.Remove(p);
+                    break;
+                }
+            }
         }
 
         public void SendMessage(string message)
